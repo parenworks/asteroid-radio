@@ -1,0 +1,20 @@
+# Built artifacts
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Gradle
+.gradle/
+build/
+app/build/
+gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+local.properties
+.DS_Store
+
+# Misc
+*.log
