@@ -11,10 +11,15 @@ class TrackRepository {
 
     private val client = OkHttpClient()
 
-    suspend fun fetchRecentlyPlayed(): List<Track> = withContext(Dispatchers.IO) {
+    suspend fun fetchRecentlyPlayed(mount: String? = null): List<Track> = withContext(Dispatchers.IO) {
         try {
+            val url = if (mount != null) {
+                "${RadioPlayer.API_URL}?mount=$mount"
+            } else {
+                RadioPlayer.API_URL
+            }
             val request = Request.Builder()
-                .url(RadioPlayer.API_URL)
+                .url(url)
                 .header("User-Agent", "AsteroidRadio/1.0")
                 .build()
 

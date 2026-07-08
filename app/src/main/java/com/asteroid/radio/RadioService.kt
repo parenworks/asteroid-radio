@@ -4,6 +4,8 @@ import android.app.PendingIntent
 import android.content.Intent
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 
@@ -13,7 +15,15 @@ class RadioService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        val player = ExoPlayer.Builder(this).build()
+        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+            .setUserAgent("AsteroidRadio/1.0")
+
+        val mediaSourceFactory = DefaultMediaSourceFactory(this)
+            .setDataSourceFactory(httpDataSourceFactory)
+
+        val player = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(mediaSourceFactory)
+            .build()
         val sessionActivityIntent = packageManager.getLaunchIntentForPackage(packageName)
         val pendingIntent = sessionActivityIntent?.let {
             PendingIntent.getActivity(

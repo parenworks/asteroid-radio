@@ -5,7 +5,9 @@ import android.content.ComponentName
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Metadata
 import androidx.media3.common.Player
+import androidx.media3.extractor.metadata.icy.IcyInfo
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
@@ -40,6 +42,15 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private val _sleepTimerRemaining = MutableStateFlow(0L)
     val sleepTimerRemaining: StateFlow<Long> = _sleepTimerRemaining.asStateFlow()
 
+    private val _selectedChannel = MutableStateFlow(Channel.CURATED)
+    val selectedChannel: StateFlow<Channel> = _selectedChannel.asStateFlow()
+
+    private val _selectedQuality = MutableStateFlow(StreamQuality.AAC)
+    val selectedQuality: StateFlow<StreamQuality> = _selectedQuality.asStateFlow()
+
+    private val _nowPlaying = MutableStateFlow("")
+    val nowPlaying: StateFlow<String> = _nowPlaying.asStateFlow()
+
     private var fetchJob: Job? = null
     private var sleepJob: Job? = null
 
@@ -70,6 +81,18 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
             _playerState.value = PlayerState.ERROR
             _statusMessage.value = error.localizedMessage ?: "Playback error"
+        }
+
+        override fun onMetadata(metadata: Metadata) {
+            for (i in 0 until metadata.length()) {
+                val entry = metadata.get(i)
+                if (entry is IcyInfo) {
+                    val title = entry.title ?: ""
+                    if (title.isNotEmpty()) {
+                        _nowPlaying.value = title
+                    }
+                }
+            }
         }
     }
 
@@ -102,7 +125,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val controller = mediaController ?: return
         when (_playerState.value) {
             PlayerState.STOPPED, PlayerState.ERROR -> {
-                val mediaItem = MediaItem.fromUri(RadioPlayer.STREAM_URL)
+                val mediaItem = MediaItem.fromUri(_selectedChannel.value.url(_selectedQuality.value))
                 controller.setMediaItem(mediaItem)
                 controller.prepare()
                 controller.play()
@@ -115,6 +138,26 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 _playerState.value = PlayerState.STOPPED
                 _statusMessage.value = "Stopped"
             }
+        }
+    }
+
+    fun selectChannel(channel: Channel) {
+        val wasPlaying = _playerState.value == PlayerState.PLAYING || _playerState.value == PlayerState.CONNECTING
+        _selectedChannel.value = channel
+        _nowPlaying.value = ""
+        refreshTracks()
+        if (wasPlaying) {
+            togglePlayback() // stop
+            togglePlayback() // restart with new channel
+        }
+    }
+
+    fun selectQuality(quality: StreamQuality) {
+        val wasPlaying = _playerState.value == PlayerState.PLAYING || _playerState.value == PlayerState.CONNECTING
+        _selectedQuality.value = quality
+        if (wasPlaying) {
+            togglePlayback() // stop
+            togglePlayback() // restart with new quality
         }
     }
 
@@ -145,7 +188,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     fun refreshTracks() {
         viewModelScope.launch {
             _isLoading.value = true
-            val result = repository.fetchRecentlyPlayed()
+            val mount = when (_selectedChannel.value) {
+                Channel.CURATED -> "asteroid.aac"
+                Channel.SHUFFLE -> "asteroid-shuffle.mp3"
+            }
+            val result = repository.fetchRecentlyPlayed(mount)
             if (result.isNotEmpty()) {
                 _tracks.value = result
             }
@@ -156,7 +203,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private fun startPeriodicFetch() {
         fetchJob = viewModelScope.launch {
             while (true) {
-                delay(30_000)
+                delay(15_000)
                 refreshTracks()
             }
         }

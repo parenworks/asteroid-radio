@@ -63,6 +63,9 @@ fun RadioScreen(viewModel: RadioViewModel = viewModel()) {
     val statusMessage by viewModel.statusMessage.collectAsState()
     val tracks by viewModel.tracks.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val selectedChannel by viewModel.selectedChannel.collectAsState()
+    val selectedQuality by viewModel.selectedQuality.collectAsState()
+    val nowPlaying by viewModel.nowPlaying.collectAsState()
 
     Column(
         modifier = Modifier
@@ -86,8 +89,34 @@ fun RadioScreen(viewModel: RadioViewModel = viewModel()) {
             color = Color(0xFF00CC00),
             fontSize = 14.sp,
             fontFamily = FontFamily.Monospace,
-            modifier = Modifier.padding(bottom = 24.dp)
+            modifier = Modifier.padding(bottom = 16.dp)
         )
+
+        // Channel selector
+        ChannelSelector(
+            selectedChannel = selectedChannel,
+            onSelect = { viewModel.selectChannel(it) }
+        )
+
+        if (selectedChannel == Channel.CURATED) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Quality selector (curated only — shuffle has fixed quality)
+            QualitySelector(
+                selectedQuality = selectedQuality,
+                onSelect = { viewModel.selectQuality(it) }
+            )
+        } else {
+            Text(
+                text = "MP3 96kbps (fixed)",
+                color = Color(0xFF006600),
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Status bar
         Row(
@@ -114,6 +143,19 @@ fun RadioScreen(viewModel: RadioViewModel = viewModel()) {
                 color = Color(0xFF00FF00),
                 fontSize = 14.sp,
                 fontFamily = FontFamily.Monospace
+            )
+        }
+
+        // Now playing from ICY metadata
+        if (nowPlaying.isNotEmpty()) {
+            Text(
+                text = nowPlaying,
+                color = Color(0xFF00CC00),
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
             )
         }
 
@@ -323,6 +365,72 @@ fun SleepTimerSection(
                         Text("${mins}m", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun ChannelSelector(
+    selectedChannel: Channel,
+    onSelect: (Channel) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "CHANNEL:",
+            color = Color(0xFF006600),
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace
+        )
+        Channel.entries.forEach { channel ->
+            val isSelected = channel == selectedChannel
+            TextButton(
+                onClick = { onSelect(channel) },
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = if (isSelected) Color(0xFF00FF00) else Color(0xFF006600),
+                    containerColor = if (isSelected) Color(0xFF003300) else Color(0xFF001100)
+                ),
+                shape = RoundedCornerShape(4.dp)
+            ) {
+                Text(channel.label, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun QualitySelector(
+    selectedQuality: StreamQuality,
+    onSelect: (StreamQuality) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "QUALITY:",
+            color = Color(0xFF006600),
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace
+        )
+        StreamQuality.entries.forEach { quality ->
+            val isSelected = quality == selectedQuality
+            TextButton(
+                onClick = { onSelect(quality) },
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = if (isSelected) Color(0xFF00FF00) else Color(0xFF006600),
+                    containerColor = if (isSelected) Color(0xFF003300) else Color(0xFF001100)
+                ),
+                shape = RoundedCornerShape(4.dp)
+            ) {
+                Text(quality.label, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
             }
         }
     }
