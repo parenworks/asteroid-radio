@@ -51,6 +51,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private val _nowPlaying = MutableStateFlow("")
     val nowPlaying: StateFlow<String> = _nowPlaying.asStateFlow()
 
+    private val _channelName = MutableStateFlow("")
+    val channelName: StateFlow<String> = _channelName.asStateFlow()
+
+    private val authRepository = AuthRepository(application)
+
     private var fetchJob: Job? = null
     private var sleepJob: Job? = null
 
@@ -100,6 +105,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         connectToService()
         refreshTracks()
         startPeriodicFetch()
+        refreshChannelName()
     }
 
     private fun connectToService() {
@@ -205,6 +211,16 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             while (true) {
                 delay(15_000)
                 refreshTracks()
+                refreshChannelName()
+            }
+        }
+    }
+
+    private fun refreshChannelName() {
+        viewModelScope.launch {
+            val name = authRepository.fetchChannelName()
+            if (name != null) {
+                _channelName.value = name
             }
         }
     }

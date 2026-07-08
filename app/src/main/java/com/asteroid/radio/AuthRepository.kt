@@ -133,6 +133,29 @@ class AuthRepository(context: Context) {
 
     fun loadPersistedCookies() = cookieStore.load()
 
+    suspend fun fetchChannelName(): String? = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("https://asteroid.radio/")
+                .header("User-Agent", "AsteroidRadio/1.0")
+                .build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val html = response.body?.string() ?: return@withContext null
+                val regex = Regex("""<option value="curated">[^<]*</option>""")
+                val match = regex.find(html) ?: return@withContext null
+                val text = match.value
+                    .replace("<option value=\"curated\">", "")
+                    .replace("</option>", "")
+                    .trim()
+                if (text.isNotEmpty()) text else null
+            }
+        } catch (e: Exception) {
+            Log.e("AuthRepository", "Channel name fetch failed", e)
+            null
+        }
+    }
+
     suspend fun fetchUserProfile(): UserProfile? = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()

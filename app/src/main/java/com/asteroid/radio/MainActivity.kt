@@ -486,6 +486,7 @@ fun RadioScreen(viewModel: RadioViewModel = viewModel()) {
     val selectedChannel by viewModel.selectedChannel.collectAsState()
     val selectedQuality by viewModel.selectedQuality.collectAsState()
     val nowPlaying by viewModel.nowPlaying.collectAsState()
+    val channelName by viewModel.channelName.collectAsState()
 
     Column(
         modifier = Modifier
@@ -563,6 +564,24 @@ fun RadioScreen(viewModel: RadioViewModel = viewModel()) {
                 color = Color(0xFF00FF00),
                 fontSize = 14.sp,
                 fontFamily = FontFamily.Monospace
+            )
+        }
+
+        // Channel name (curated playlist name or Shuffle)
+        val displayName = when (selectedChannel) {
+            Channel.CURATED -> channelName.ifEmpty { "Curated" }
+            Channel.SHUFFLE -> "Shuffle"
+        }
+        if (displayName.isNotEmpty()) {
+            Text(
+                text = displayName,
+                color = Color(0xFF00AA00),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
             )
         }
 
